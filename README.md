@@ -1,98 +1,60 @@
-# Sigma Route Map Plugin
+# Shipment Timeline — Map Plugin (Sigma)
 
-A custom [Sigma](https://sigmacomputing.com) plugin that draws **shipment paths as
-lines with direction arrows**, **event markers** as category-symbol pins, and
-**geofences** (circles + polygons) underneath.
+A custom [Sigma](https://sigmacomputing.com) plugin that renders a shipment's
+`TL_TIMELINE_EVENTS` on a map: transit legs as **lines with direction arrows**,
+**numbered origin/destination waypoint pins** (reached vs missed, with a ⚓ badge
+at container ports), and every other event (unplanned stops, temp excursions,
+carrier changes, loads) as icons that **cluster by location** — a place with
+several events collapses to one hub and fans out into a hub-and-spoke when you
+zoom in or click it.
 
 Built with React + Vite + [`@sigmacomputing/plugin`](https://www.npmjs.com/package/@sigmacomputing/plugin)
 + Leaflet + `leaflet-polylinedecorator`. Sibling of `sigma-map-plugin` (the
-clustering map), sharing the same setup/lessons.
+clustering map), sharing the same setup/deploy lessons. The design was nailed
+down first in `shipment-timeline/mockups/` and ported here.
 
-## What it does
-
-- **Line** — connects the points of each shipment into a path, ordered by an
-  `order` column (stable-sorted; ties preserve row order). Style is selectable
-  (solid / dashed / dotted) with an optional color, and **sparse direction
-  arrows** (~4 per line) you can toggle off.
-- **Event markers** — only rows where `eventType` is set become pins; the
-  symbol + color are assigned per event type (with a legend). Two events at the
-  **same shipment + same `order`** (same time) are **merged** into one pin with
-  a count badge and a combined tooltip.
-- **Geofences** — a second source draws circles and polygons *under* the line
-  and markers, colored by an optional category.
-
-## Editor panel
-
-**Points source** (`points`):
-
-| Field | Required | Purpose |
-| --- | --- | --- |
-| `latitude`, `longitude` | ✅ | point location |
-| `shipmentId` | — | groups points into separate lines |
-| `order` | — | orders points along each line (timestamp or sequence) |
-| `eventType` | — | non-null → an event marker; drives symbol/color |
-| `tooltip` | — | one or more columns shown on a marker's hover (one `Name: value` line each) |
-
-Events at the **same place** (same shipment + same coordinate, rounded to ~1m)
-are **merged** into one pin with a count badge and combined tooltip, regardless
-of timestamp.
-
-**Marker symbols** are auto-assigned per event type (see the legend). To set
-specific ones, use the **`eventSymbols`** field — one `Event type=symbol` per
-line (emoji or any glyph work):
-
-```
-Temp excursion=🌡
-Delay=⏱
-Delivered=✓
-```
-Unlisted types keep their auto-assigned glyph.
-
-**Geofences source** (`geofences`):
-
-| Field | Required | Purpose |
-| --- | --- | --- |
-| `geofenceGeometry` | ✅ (for geofences) | geometry — use `BOUNDARY` (or `BOUNDARY_GEOJSON`) from `TRANSFORMS.PLATFORM.GEOFENCES_LATEST_V3` |
-| `geofenceLabel` | — | hover tooltip (e.g. `LOCATION_NAME`) |
-| `geofenceCategory` | — | fill color by category (e.g. `GEOFENCE_LOCATION_TYPE`) |
-
-**Styling:** `lineStyle`, `lineColor`, `showArrows`, `colorPalette`, `basemap` +
-`hereApiKey`, `showLegendHeader`, `legendTitle`.
-
-### Geofence geometry
-
-Feed the **`BOUNDARY`** column (GEOGRAPHY) — Snowflake serializes it to GeoJSON,
-identical to `BOUNDARY_GEOJSON`. The parser accepts a GeoJSON object, a GeoJSON
-string, or WKT. It covers both shapes the platform uses:
-
-- **Circle** → GeoJSON `{"properties":{"radius":<m>,"subType":"Circle"},"geometry":{"type":"Point",…}}` — drawn as `L.circle`.
-- **Polygon** → standard GeoJSON `Polygon` — drawn directly.
-
-> ⚠️ A circle's radius survives **only in the GeoJSON form** (the raw GEOGRAPHY
-> is just a center point). If circles render as tiny dots, Sigma delivered the
-> column as WKT — switch the column to `BOUNDARY_GEOJSON` or `ST_ASGEOJSON(BOUNDARY)`.
-
-> Geofences aren't clustered — **filter to the relevant ones** in your query
-> (the source table has ~90k). Don't point it at the whole table unfiltered.
-
-## Local development
+## Preview standalone
 
 ```bash
 npm install
-npm run dev        # serves http://localhost:3001
+npm run dev
 ```
 
-Demo mode (no workbook needed): `http://localhost:3001/?demo=1` renders a sample
-SF→OKC route with events (including a merged one) and two geofences. Params:
-`?lineStyle=Dashed`, `?noarrows`, `?palette=Warm`, `?linecolor=e15759`,
-`?basemap=HERE Day&here=YOUR_KEY`.
+Open `http://localhost:3001/?demo=1` — renders real rows for shipment 420890/A1
+(embedded in `src/demoData.js`) with no Sigma connection needed.
 
-In Sigma: add a **Plugin** element, set the Dev URL to `http://localhost:3001`,
-then assign the **points** source (+ columns) and optionally the **geofences**
-source.
+## Wiring it up in Sigma
 
-## Deploying
+Point the **events** source at `SCRATCH.CSLESNICK.TL_TIMELINE_EVENTS` (filtered
+to one shipment) and map these columns:
 
-Static build — same as `sigma-map-plugin`. `npm run build` → host `./dist` over
-HTTPS (GitHub Pages, etc.) → register the URL in Sigma under Custom Plugins.
-`base: './'` keeps asset paths relative.
+| Panel field | Column | Used for |
+|---|---|---|
+| `shipmentId` | `internal_shipment_id` | grouping (usually one shipment) |
+| `eventType` | `event_type` | icon + color + line/marker routing |
+| `order` | `event_time` | ordering |
+| `latitude` / `longitude` | `latitude` / `longitude` | point placement |
+| `geometry` | `geojson` | transit LineString + waypoint polygon |
+| `label` | `display_label` | marker label |
+| `status` | `status` | tooltip / popup text |
+| `legMode` | `leg_mode` | transit symbol (ship/plane/truck/train) |
+| `legNumber` | `leg_number` | "In transit — Leg N" |
+| `waypointNumber` | `waypoint_number` | numbered pin + origin/destination |
+| `isContainerPort` | `is_container_port` | anchor badge |
+| `color` | `color` | temp out = red, back = blue |
+
+**Base map** — Carto Light (default), OpenStreetMap, or HERE (needs an API key
+in the panel). **Options** — toggle direction arrows. The legend (bottom-right)
+toggles each layer on/off.
+
+## Notes / gotchas
+
+- The editor panel is declared once at load; a plugin must never write config at
+  runtime (Sigma reloads the element → infinite loop). Same lesson as the sibling.
+- `geojson` cells may arrive as a GeoJSON object, a JSON string, or a Feature —
+  `parseGeom` normalizes all three; lines and polygons read `.geometry || self`.
+- Co-located events group in **screen space**, so they separate as you zoom; a
+  stack at identical coordinates stays a hub and fans out past zoom 10.
+- Deploy mirrors `sigma-map-plugin` (build to `dist/`, host on GitHub Pages /
+  surge / vercel). tiveinc blocks Pages, so prod hosting lives on the personal
+  account — see that repo's notes.
