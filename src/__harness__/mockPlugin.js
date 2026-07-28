@@ -9,27 +9,28 @@ const COLS = {
 }
 // 4 rows: origin waypoint, ocean leg w/ LineString, a shock alert, missed destination
 const D = {
-  c_type:['waypoint','travel','alert','failed_waypoint'],
-  c_lat:[52.95,null,47.5,37.74],
-  c_lon:[-1.15,null,-12.0,-25.67],
+  c_type:['waypoint','travel','alert','alert','failed_waypoint'],
+  c_lat:[52.95,null,47.5,47.502,37.74],
+  c_lon:[-1.15,null,-12.0,-12.002,-25.67],
   c_geo:[
     JSON.stringify({type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-1.15,52.95]}}),
     JSON.stringify({type:'LineString',coordinates:[[-3,53.41],[-8.5,50],[-16,45],[-23,39.8]]}),
     JSON.stringify({type:'Point',coordinates:[-12,47.5]}),
+    JSON.stringify({type:'Point',coordinates:[-12.002,47.502]}),
     JSON.stringify({type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-25.67,37.74]}}),
   ],
-  c_status:['Shipment origin: Northgate Cold Store','In transit, leg 2: A -> B','Shock alert ×4 over 12 min','Shipment destination (not reached): Port Vesta'],
-  c_label:['Waypoint','In transit','Alert','Failed waypoint'],
-  c_time:[1778500000000,1778600000000,1779000000000,1779500000000], // epoch ms, like Sigma
-  c_ship:['SHIP-1','SHIP-1','SHIP-1','SHIP-1'],
-  c_wp:[1,null,null,3],
-  c_mode:['Road','Ocean',null,'Ocean'],
-  c_leg:[1,2,2,2],
-  c_port:[false,false,false,false],
-  c_icon:['pin','transit','bolt','pin-missed'],
-  c_shape:['pin','bare','triangle','pin'],
-  c_color:['#2563eb',null,'#dc2626','#94a3b8'],
-  c_dur:[604800,4000000,null,null],
+  c_status:['Shipment origin: Northgate Cold Store','In transit, leg 2: A -> B','Shock alert ×4 over 12 min','Shipment destination (not reached): Port Vesta','Light alert (240 LUX)'],
+  c_label:['Waypoint','In transit','Alert','Failed waypoint','Alert'],
+  c_time:[1778500000000,1778600000000,1779000000000,1779500000000,1779100000000], // epoch ms, like Sigma
+  c_ship:['SHIP-1','SHIP-1','SHIP-1','SHIP-1','SHIP-1'],
+  c_wp:[1,null,null,3,null],
+  c_mode:['Road','Ocean',null,'Ocean',null],
+  c_leg:[1,2,2,2,2],
+  c_port:[false,false,false,false,false],
+  c_icon:['pin','transit','bolt','pin-missed','sun'],
+  c_shape:['pin','bare','triangle','pin','triangle'],
+  c_color:['#2563eb',null,'#dc2626','#94a3b8','#dc2626'],
+  c_dur:[604800,4000000,null,null,null],
 }
 const CONFIG = {
   events:'el_events', eventType:'c_type', latitude:'c_lat', longitude:'c_lon', geometry:'c_geo',

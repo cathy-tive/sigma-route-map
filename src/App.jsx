@@ -220,9 +220,14 @@ export default function App(){
     shownRef.current=null
     const EXPAND_ZOOM=10,PIX=42
     const vis=(t)=>{const st=shownRef.current;return st===null||st.has(t)}
-    function collapsedCount(n){ return L.divIcon({className:'',html:`<div style="width:32px;height:32px;border-radius:50%;background:#fff;border:3px solid #586176;box-shadow:0 1px 5px rgba(20,30,60,.3);display:flex;align-items:center;justify-content:center;font-weight:800;color:#586176;font-size:14px">${n}</div>`,iconSize:[32,32],iconAnchor:[16,16]}) }
-    function collapsedWp(lead,extra){ const b=extra>0?`<div style="position:absolute;left:28px;top:-4px;background:#586176;color:#fff;border-radius:11px;min-width:26px;height:21px;padding:0 5px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)">+${extra}</div>`:''
-      return L.divIcon({className:'',html:`<div style="position:relative">${markerHtml(lead,34)}${b}</div>`,iconSize:[60,44],iconAnchor:[17,43]}) }
+    // Collapsed group: ALWAYS a representative real marker + a "+N" bubble. One
+    // language for "N more here", so a number inside a pin only ever means waypoint order.
+    function collapsedIcon(lead,extra){
+      const size=32, isPin=(lead.shape||DEF_SHAPE[lead.type])==='pin', h=isPin?Math.round(size*1.29):size
+      const b=extra>0?`<div style="position:absolute;left:${size-8}px;top:-6px;background:#586176;color:#fff;border-radius:11px;min-width:26px;height:21px;padding:0 5px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)">+${extra}</div>`:''
+      return L.divIcon({className:'',html:`<div style="position:relative;width:${size}px;height:${h}px">${markerHtml(lead,size)}${b}</div>`,
+        iconSize:[size+26,h], iconAnchor:[size/2, isPin?h-1:h/2]})
+    }
     function hubIcon(items){ const k=items.length,R=Math.min(34+k*3,64),c=R+26,S=c*2,sz=28; let sp='',ic=''
       items.forEach((e,i)=>{ const a=(-90+i*360/k)*Math.PI/180,x=c+R*Math.cos(a),y=c+R*Math.sin(a)
         sp+=`<line x1="${c}" y1="${c}" x2="${x}" y2="${y}" stroke="#aab4c6" stroke-width="1.5"/>`; ic+=`<div style="position:absolute;left:${x-sz/2}px;top:${y-sz/2}px">${markerHtml(e,sz)}</div>` })
@@ -236,8 +241,10 @@ export default function App(){
       for(const g of gs){
         if(g.items.length===1){ const e=g.items[0]; L.marker([e.la,e.lo],{icon:markerIcon(e,32),zIndexOffset:e.shape==='pin'?1000:0}).bindPopup(pop(e)).addTo(layer) }
         else if(z>=EXPAND_ZOOM){ L.marker([g.la,g.lo],{icon:hubIcon(g.items),zIndexOffset:500}).bindPopup(`<b>${g.items.length} events at this location</b>`+g.items.map(e=>`<div style="margin-top:3px">• ${esc(labelOf(e))} — ${esc((e.status||'').slice(0,70))}</div>`).join('')).addTo(layer) }
-        else { const wps=g.items.filter(e=>e.shape==='pin').sort((a,b)=>(a.wpNum||0)-(b.wpNum||0))
-          const m=wps.length?L.marker([wps[0].la,wps[0].lo],{icon:collapsedWp(wps[0],g.items.length-1),zIndexOffset:900}):L.marker([g.la,g.lo],{icon:collapsedCount(g.items.length),zIndexOffset:400})
+        else { // prefer a waypoint as the representative marker, else the first event
+          const wps=g.items.filter(e=>(e.shape||DEF_SHAPE[e.type])==='pin').sort((a,b)=>(a.wpNum||0)-(b.wpNum||0))
+          const lead=wps.length?wps[0]:g.items[0]
+          const m=L.marker([lead.la,lead.lo],{icon:collapsedIcon(lead,g.items.length-1),zIndexOffset:wps.length?900:400})
           m.bindTooltip(g.items.length+' events here — click to zoom in'); m.on('click',()=>map.flyTo([g.la,g.lo],Math.max(EXPAND_ZOOM,z+3))); m.addTo(layer) }
       }
     }
