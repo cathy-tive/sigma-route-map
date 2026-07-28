@@ -5,7 +5,7 @@ import { client, useConfig, useElementColumns, usePaginatedElementData } from '@
 import { DEMO_EVENTS } from './demoData.js'
 
 const PAGE_SIZE = 25000
-const BUILD = 'v7'
+const BUILD = 'v8'
 
 // ===== icon system: shape (container) + color (hex) + icon_key (inner glyph), all from data =====
 const GLYPH = {
@@ -155,6 +155,11 @@ export default function App(){
     const lat=col(config.latitude),lon=col(config.longitude),geo=col(config.geometry),ship=col(config.shipmentId),ord=col(config.order),
       status=col(config.status),label=col(config.label),mode=col(config.legMode),legn=col(config.legNumber),
       wp=col(config.waypointNumber),cont=col(config.isContainerPort),color=col(config.color),shape=col(config.shape),ik=col(config.iconKey)
+    // user-chosen tooltip columns (ids may arrive as strings or objects); keep their display names
+    const rawTip=Array.isArray(config.tooltip)?config.tooltip:(config.tooltip?[config.tooltip]:[])
+    const tipCols=rawTip
+      .map(raw=>{ const id=typeof raw==='string'?raw:(raw?.id??raw?.columnId??raw?.name); return { id, name:cols?.[id]?.name||'', values:data?.[id] } })
+      .filter(c=>c.id&&c.values)
     const out=[]
     for(let i=0;i<et.length;i++){
       out.push({ shipId:ship?String(ship[i]??''):'_all', type:et[i]?String(et[i]):null, order:ord?ord[i]:i,
