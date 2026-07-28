@@ -26,13 +26,18 @@ const ROUTE = '#8a9cb8'
 const gsvg = (key, size) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="stroke:#fff;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round">${GLYPH[key] || ''}</svg>`
 const ANCHOR_BADGE = '<div style="position:absolute;right:-9px;top:-8px;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid #586176;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.35);font-size:13px;line-height:1">&#9875;</div>'
 
+const DEF_SHAPE={waypoint:'pin',failed_waypoint:'pin',travel:'bare','unplanned stop':'octagon',temp_out_of_range:'triangle',temp_back_in_range:'triangle',alert:'triangle',carrier_change:'circle',loading:'circle',unloading:'circle',arrive:'circle',depart:'circle'}
+const DEF_COLOR={waypoint:'#2563eb',failed_waypoint:'#94a3b8',travel:null,'unplanned stop':'#d97706',temp_out_of_range:'#dc2626',temp_back_in_range:'#0d9488',alert:'#dc2626',carrier_change:'#7c3aed',loading:'#16a34a',unloading:'#16a34a',arrive:'#586176',depart:'#586176'}
+const DEF_ICON={waypoint:'pin',failed_waypoint:'pin-missed',travel:'transit','unplanned stop':'stop',temp_out_of_range:'thermo-up',temp_back_in_range:'thermo-dn',alert:'bell',carrier_change:'handoff',loading:'load',unloading:'unload',arrive:'anchor',depart:'anchor'}
 function markerHtml(e, size) {
   size = size || 32
-  const color = e.color || '#586176'
-  const shape = e.shape || 'circle'
+  const type = e.type
+  const shape = e.shape || DEF_SHAPE[type] || 'circle'
+  const color = e.color || DEF_COLOR[type] || '#586176'
+  const iconKey = e.iconKey || DEF_ICON[type] || 'bell'
   if (shape === 'bare') return `<span style="font-size:${size - 4}px;line-height:1;filter:drop-shadow(0 1px 2px rgba(20,30,60,.4))">${MODE_EMOJI[e.legMode] || '🧭'}</span>`
   if (shape === 'pin') {
-    const w = size, h = Math.round(size * 1.29), missed = e.iconKey === 'pin-missed'
+    const w = size, h = Math.round(size * 1.29), missed = iconKey === 'pin-missed'
     const num = e.wpNum != null ? e.wpNum : ''
     const slash = missed ? '<path d="M4 4 L30 40" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' : ''
     const anchor = e.container ? ANCHOR_BADGE : ''
@@ -41,8 +46,8 @@ function markerHtml(e, size) {
       `<div style="position:absolute;top:${Math.round(h * 0.14)}px;left:0;width:${w}px;text-align:center;font-weight:800;font-size:${Math.round(size * 0.44)}px;color:${missed ? '#1a2233' : '#fff'}">${num}</div>${anchor}</div>`
   }
   if (shape === 'octagon') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M10 2H24L32 10V24L24 32H10L2 24V10Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div>`
-  if (shape === 'triangle') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M17 3.5 32.5 31H1.5Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:${Math.round(size * 0.2)}px">${gsvg(e.iconKey, Math.round(size * 0.42))}</span></div>`
-  return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(20,30,60,.35);display:flex;align-items:center;justify-content:center;background:${color}">${gsvg(e.iconKey, Math.round(size * 0.56))}</div>`
+  if (shape === 'triangle') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M17 3.5 32.5 31H1.5Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:${Math.round(size * 0.2)}px">${gsvg(iconKey, Math.round(size * 0.42))}</span></div>`
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(20,30,60,.35);display:flex;align-items:center;justify-content:center;background:${color}">${gsvg(iconKey, Math.round(size * 0.56))}</div>`
 }
 function markerIcon(e, size) {
   size = size || 32
@@ -99,13 +104,14 @@ function makeBaseLayer(basemap, apiKey){
   return L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,maxNativeZoom:19,subdomains:'abcd',attribution:'&copy; CARTO'})
 }
 
-const LEGEND = [
-  { label:'Waypoints', rep:{shape:'pin',color:'#2563eb'}, types:['waypoint','failed_waypoint'] },
-  { label:'Unplanned stops', rep:{shape:'octagon',color:'#d97706'}, types:['unplanned stop'] },
-  { label:'Temp out of range', rep:{shape:'triangle',color:'#dc2626',iconKey:'thermo-up'}, types:['temp_out_of_range'] },
-  { label:'Temp back in range', rep:{shape:'triangle',color:'#0d9488',iconKey:'thermo-dn'}, types:['temp_back_in_range'] },
-  { label:'Alerts', rep:{shape:'triangle',color:'#dc2626',iconKey:'bolt'}, types:['alert'] },
-  { label:'Carrier / loaded', rep:{shape:'circle',color:'#7c3aed',iconKey:'handoff'}, types:['carrier_change','loading','unloading'] },
+const GROUPS = [
+  { label:'Waypoints', types:['waypoint','failed_waypoint'] },
+  { label:'Unplanned stops', types:['unplanned stop'] },
+  { label:'Temp out of range', types:['temp_out_of_range'] },
+  { label:'Temp back in range', types:['temp_back_in_range'] },
+  { label:'Alerts', types:['alert'] },
+  { label:'Carrier change', types:['carrier_change'] },
+  { label:'Loaded / unloaded', types:['loading','unloading'] },
 ]
 
 function usePagedElementData(configId){
@@ -123,7 +129,7 @@ export default function App(){
   const isDemo=typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('demo')
   const mapRef=useRef(null), mapInstance=useRef(null), baseRef=useRef(null)
   const geomLayer=useRef(null), markerLayer=useRef(null), legendRef=useRef(null), fitted=useRef(false)
-  const activeRef=useRef(new Set())
+  const shownRef=useRef(null)
 
   const { rows, error } = useMemo(()=>{
     if(isDemo&&!config.events){
@@ -181,8 +187,9 @@ export default function App(){
 
   useEffect(()=>{ // markers: hub-and-spoke, collapse/expand
     const map=mapInstance.current,layer=markerLayer.current; if(!map||!layer)return
-    activeRef.current=new Set(rows.map(r=>r.type))
+    shownRef.current=null
     const EXPAND_ZOOM=10,PIX=42
+    const vis=(t)=>{const st=shownRef.current;return st===null||st.has(t)}
     function collapsedCount(n){ return L.divIcon({className:'',html:`<div style="width:32px;height:32px;border-radius:50%;background:#fff;border:3px solid #586176;box-shadow:0 1px 5px rgba(20,30,60,.3);display:flex;align-items:center;justify-content:center;font-weight:800;color:#586176;font-size:14px">${n}</div>`,iconSize:[32,32],iconAnchor:[16,16]}) }
     function collapsedWp(lead,extra){ const b=extra>0?`<div style="position:absolute;left:28px;top:-4px;background:#586176;color:#fff;border-radius:11px;min-width:26px;height:21px;padding:0 5px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)">+${extra}</div>`:''
       return L.divIcon({className:'',html:`<div style="position:relative">${markerHtml(lead,34)}${b}</div>`,iconSize:[60,44],iconAnchor:[17,43]}) }
@@ -193,7 +200,7 @@ export default function App(){
       return L.divIcon({className:'',html:`<div style="position:relative;width:${S}px;height:${S}px"><svg width="${S}" height="${S}" style="position:absolute;left:0;top:0">${sp}</svg>${hub}${ic}</div>`,iconSize:[S,S],iconAnchor:[c,c]}) }
     function render(){
       layer.clearLayers(); const z=map.getZoom()
-      const pts=rows.filter(e=>e.la!=null&&e.lo!=null&&e.type!=='travel'&&activeRef.current.has(e.type))
+      const pts=rows.filter(e=>e.la!=null&&e.lo!=null&&e.type!=='travel'&&vis(e.type))
       const gs=[]
       for(const e of pts){ const p=map.latLngToLayerPoint([e.la,e.lo]); let g=null; for(const x of gs){ if(p.distanceTo(x.p)<PIX){g=x;break} } if(!g){g={p,la:e.la,lo:e.lo,items:[]};gs.push(g)} g.items.push(e) }
       for(const g of gs){
@@ -207,14 +214,20 @@ export default function App(){
     render(); map.on('zoomend moveend',render); return ()=>map.off('zoomend moveend',render)
   },[rows])
 
-  useEffect(()=>{ // legend
+  useEffect(()=>{ // legend — dynamic, matches the data; click isolates then adds (Sigma-style)
     const map=mapInstance.current; if(!map)return; if(legendRef.current)legendRef.current.remove(); if(!rows.length)return
     const present=new Set(rows.map(r=>r.type))
-    const items=LEGEND.filter(c=>c.types.some(t=>present.has(t)))
+    const items=GROUPS.filter(g=>g.types.some(t=>present.has(t))).map(g=>{const f=rows.find(r=>g.types.includes(r.type));return {...g, rep: f?{...f,wpNum:null,container:false}:{type:g.types[0]}}})
     const legend=L.control({position:'bottomright'})
     legend.onAdd=()=>{ const div=L.DomUtil.create('div','map-legend')
-      div.innerHTML='<div class="map-legend-header">Layers — click to toggle</div>'+items.map((c,i)=>`<div class="legend-row" data-i="${i}"><span class="legend-sw">${markerHtml(c.rep,22)}</span>${esc(c.label)}</div>`).join('')
-      div.querySelectorAll('.legend-row').forEach(row=>{ row.onclick=()=>{ const c=items[+row.dataset.i]; const on=row.classList.toggle('off'); c.types.forEach(t=>on?activeRef.current.delete(t):activeRef.current.add(t)); map.fire('moveend') } })
+      div.innerHTML='<div class="map-legend-header">Layers — click to isolate, click more to add</div>'+items.map((c,i)=>`<div class="legend-row" data-i="${i}"><span class="legend-sw">${markerHtml(c.rep,22)}</span>${esc(c.label)}</div>`).join('')
+      const paint=()=>{ const sh=shownRef.current; div.querySelectorAll('.legend-row').forEach((r2,j)=>{ const on = sh===null || items[j].types.some(t=>sh.has(t)); r2.classList.toggle('off', !on) }) }
+      div.querySelectorAll('.legend-row').forEach(row=>{ row.onclick=()=>{
+        const g=items[+row.dataset.i]; let sh=shownRef.current
+        if(sh===null){ sh=new Set(g.types) }
+        else { const allIn=g.types.every(t=>sh.has(t)); if(allIn){ g.types.forEach(t=>sh.delete(t)) } else { g.types.forEach(t=>sh.add(t)) } if(sh.size===0) sh=null }
+        shownRef.current=sh; paint(); map.fire('moveend')
+      } })
       L.DomEvent.disableClickPropagation(div); return div }
     legend.addTo(map); legendRef.current=legend
   },[rows])
