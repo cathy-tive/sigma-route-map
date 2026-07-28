@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet-polylinedecorator'
-import { client, useConfig, usePaginatedElementData } from '@sigmacomputing/plugin'
+import { client, useConfig, useElementColumns, usePaginatedElementData } from '@sigmacomputing/plugin'
 import { DEMO_EVENTS } from './demoData.js'
 
 const PAGE_SIZE = 25000
-const BUILD = 'v6'
+const BUILD = 'v7'
 
 // ===== icon system: shape (container) + color (hex) + icon_key (inner glyph), all from data =====
 const GLYPH = {
@@ -76,6 +76,7 @@ const BASE_CONFIG = [
   { name:'iconKey', type:'column', source:'events', allowMultiple:false, label:'Icon key (optional) — typed alert glyphs' },
   { name:'shape', type:'column', source:'events', allowMultiple:false, label:'Shape (optional) — overrides default' },
   { name:'color', type:'column', source:'events', allowMultiple:false, label:'Color (optional) — hex, overrides default' },
+  { name:'tooltip', type:'column', source:'events', allowMultiple:true, label:'Tooltip fields — pick any columns to show' },
   { name:'Base map', type:'group' },
   { name:'basemap', type:'dropdown', values:BASEMAP_OPTIONS, defaultValue:'Carto Light' },
   { name:'hereApiKey', type:'text', secure:true, placeholder:'HERE API key (for HERE basemaps)' },
@@ -96,7 +97,15 @@ function labelOf(e){
   if(t==='travel') return 'In transit — Leg '+(e.legNumber ?? '')
   return e.label || t
 }
-const pop=(e)=>`<b>${esc(labelOf(e))}</b><br>${esc(e.status||'')}`
+function pop(e){
+  const head=`<b>${esc(labelOf(e))}</b>`
+  if(e.tip&&e.tip.length){
+    const lines=e.tip.filter(t=>t.value!==null&&t.value!==undefined&&t.value!=='')
+      .map(t=>`<div style="margin-top:2px">${t.name?`<span style="color:#697089">${esc(t.name)}:</span> `:''}${esc(t.value)}</div>`)
+    return head+(lines.length?lines.join(''):'')
+  }
+  return head+`<br>${esc(e.status||'')}`
+}
 
 function makeBaseLayer(basemap, apiKey){
   const style=HERE_STYLES[basemap]
@@ -127,6 +136,7 @@ function usePagedElementData(configId){
 export default function App(){
   const config=useConfig()
   const data=usePagedElementData(config.events)
+  const cols=useElementColumns(config.events)
   const isDemo=typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('demo')
   const mapRef=useRef(null), mapInstance=useRef(null), baseRef=useRef(null)
   const geomLayer=useRef(null), markerLayer=useRef(null), legendRef=useRef(null), fitted=useRef(false)
@@ -136,7 +146,7 @@ export default function App(){
     if(isDemo&&!config.events){
       return { rows: DEMO_EVENTS.map(r=>({ shipId:'demo', type:r.EVENT_TYPE, order:r.EVENT_TIME, la:toNum(r.LATITUDE), lo:toNum(r.LONGITUDE),
         geojson:r.GEOJSON, status:r.STATUS, label:r.DISPLAY_LABEL, legMode:r.LEG_MODE, legNumber:r.LEG_NUMBER,
-        wpNum:r.WAYPOINT_NUMBER, container:!!r.IS_CONTAINER_PORT, color:r.COLOR, shape:r.SHAPE, iconKey:r.ICON_KEY })), error:null }
+        wpNum:r.WAYPOINT_NUMBER, container:!!r.IS_CONTAINER_PORT, color:r.COLOR, shape:r.SHAPE, iconKey:r.ICON_KEY, tip:[] })), error:null }
     }
     if(!config.events) return { rows:[], error:'Select an events table in the panel.' }
     if(!config.eventType) return { rows:[], error:'Choose the event type column.' }
@@ -150,10 +160,11 @@ export default function App(){
       out.push({ shipId:ship?String(ship[i]??''):'_all', type:et[i]?String(et[i]):null, order:ord?ord[i]:i,
         la:lat?toNum(lat[i]):null, lo:lon?toNum(lon[i]):null, geojson:geo?parseGeom(geo[i]):null, status:status?status[i]:'',
         label:label?label[i]:null, legMode:mode?mode[i]:null, legNumber:legn?legn[i]:null, wpNum:wp?toNum(wp[i]):null,
-        container:cont?truthy(cont[i]):false, color:color?color[i]:null, shape:shape?String(shape[i]||''):null, iconKey:ik?String(ik[i]||''):null })
+        container:cont?truthy(cont[i]):false, color:color?color[i]:null, shape:shape?String(shape[i]||''):null, iconKey:ik?String(ik[i]||''):null,
+        tip:tipCols.map(c=>({name:c.name,value:c.values[i]})) })
     }
     return { rows:out, error:out.length?null:'No rows.' }
-  },[config,data,isDemo])
+  },[config,data,cols,isDemo])
 
   const cfg=config
   useEffect(()=>{ // init once
