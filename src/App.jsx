@@ -5,7 +5,7 @@ import { client, useConfig, usePaginatedElementData } from '@sigmacomputing/plug
 import { DEMO_EVENTS } from './demoData.js'
 
 const PAGE_SIZE = 25000
-const BUILD = 'v5'
+const BUILD = 'v6'
 
 // ===== icon system: shape (container) + color (hex) + icon_key (inner glyph), all from data =====
 const GLYPH = {
@@ -47,7 +47,7 @@ function markerHtml(e, size) {
       `<div style="position:absolute;top:${Math.round(h * 0.14)}px;left:0;width:${w}px;text-align:center;font-weight:800;font-size:${Math.round(size * 0.44)}px;color:${missed ? '#1a2233' : '#fff'}">${num}</div>${anchor}</div>`
   }
   if (shape === 'octagon') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M10 2H24L32 10V24L24 32H10L2 24V10Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div>`
-  if (shape === 'triangle') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M17 3.5 32.5 31H1.5Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:${Math.round(size * 0.26)}px">${gsvg(iconKey, Math.round(size * 0.48))}</span></div>`
+  if (shape === 'triangle') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M17 3.5 32.5 31H1.5Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:${Math.round(size * 0.24)}px">${gsvg(iconKey, Math.round(size * 0.44))}</span></div>`
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(20,30,60,.35);display:flex;align-items:center;justify-content:center;background:${color}">${gsvg(iconKey, Math.round(size * 0.56))}</div>`
 }
 function markerIcon(e, size) {
@@ -61,23 +61,21 @@ const HERE_STYLES = { 'HERE Day':'explore.day','HERE Night':'explore.night','HER
 const BASEMAP_OPTIONS = ['Carto Light','OpenStreetMap',...Object.keys(HERE_STYLES)]
 const BASE_CONFIG = [
   { name:'events', type:'element' },
-  { name:'shipmentId', type:'column', source:'events', allowMultiple:false },
-  { name:'eventType', type:'column', source:'events', allowMultiple:false },
-  { name:'order', type:'column', source:'events', allowMultiple:false },
-  { name:'latitude', type:'column', source:'events', allowMultiple:false },
-  { name:'longitude', type:'column', source:'events', allowMultiple:false },
-  { name:'geometry', type:'column', source:'events', allowMultiple:false },
-  { name:'label', type:'column', source:'events', allowMultiple:false },
-  { name:'status', type:'column', source:'events', allowMultiple:false },
-  { name:'Style (from data)', type:'group' },
-  { name:'shape', type:'column', source:'events', allowMultiple:false },
-  { name:'color', type:'column', source:'events', allowMultiple:false },
-  { name:'iconKey', type:'column', source:'events', allowMultiple:false },
-  { name:'Attributes', type:'group' },
-  { name:'legMode', type:'column', source:'events', allowMultiple:false },
-  { name:'legNumber', type:'column', source:'events', allowMultiple:false },
-  { name:'waypointNumber', type:'column', source:'events', allowMultiple:false },
-  { name:'isContainerPort', type:'column', source:'events', allowMultiple:false },
+  { name:'eventType', type:'column', source:'events', allowMultiple:false, label:'Event type (required)' },
+  { name:'latitude', type:'column', source:'events', allowMultiple:false, label:'Latitude' },
+  { name:'longitude', type:'column', source:'events', allowMultiple:false, label:'Longitude' },
+  { name:'geometry', type:'column', source:'events', allowMultiple:false, label:'Geometry (geojson) — route line + polygons' },
+  { name:'status', type:'column', source:'events', allowMultiple:false, label:'Status text' },
+  { name:'label', type:'column', source:'events', allowMultiple:false, label:'Display label' },
+  { name:'order', type:'column', source:'events', allowMultiple:false, label:'Event time (ordering)' },
+  { name:'shipmentId', type:'column', source:'events', allowMultiple:false, label:'Shipment id' },
+  { name:'waypointNumber', type:'column', source:'events', allowMultiple:false, label:'Waypoint number — numbers the pins' },
+  { name:'legMode', type:'column', source:'events', allowMultiple:false, label:'Leg mode — transit symbol' },
+  { name:'legNumber', type:'column', source:'events', allowMultiple:false, label:'Leg number — "Leg N"' },
+  { name:'isContainerPort', type:'column', source:'events', allowMultiple:false, label:'Is container port — anchor badge' },
+  { name:'iconKey', type:'column', source:'events', allowMultiple:false, label:'Icon key (optional) — typed alert glyphs' },
+  { name:'shape', type:'column', source:'events', allowMultiple:false, label:'Shape (optional) — overrides default' },
+  { name:'color', type:'column', source:'events', allowMultiple:false, label:'Color (optional) — hex, overrides default' },
   { name:'Base map', type:'group' },
   { name:'basemap', type:'dropdown', values:BASEMAP_OPTIONS, defaultValue:'Carto Light' },
   { name:'hereApiKey', type:'text', secure:true, placeholder:'HERE API key (for HERE basemaps)' },
