@@ -1,0 +1,125 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+}
+
+.plugin-message {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  text-align: center;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.map-loading {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 6px 14px;
+  background: rgba(17, 24, 39, 0.85);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Event location pin (teardrop) with a category color + glyph. */
+.route-pin-wrap {
+  background: transparent;
+  border: none;
+}
+.route-pin {
+  position: relative;
+  width: 28px;
+  height: 38px;
+}
+.route-pin svg {
+  width: 28px;
+  height: 38px;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+.route-pin-glyph {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 28px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+.route-pin-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  box-sizing: border-box;
+  border: 1.5px solid #fff;
+}
+
+.map-legend {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.map-legend-header {
+  padding: 8px 10px 4px;
+  font-weight: 700;
+  flex: 0 0 auto;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.map-legend-rows {
+  padding: 6px 10px 8px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+.map-legend .legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-legend .legend-glyph {
+  width: 16px;
+  text-align: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
