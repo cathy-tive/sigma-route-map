@@ -5,7 +5,7 @@ import { client, useConfig, useElementColumns, usePaginatedElementData } from '@
 import { DEMO_EVENTS } from './demoData.js'
 
 const PAGE_SIZE = 25000
-const BUILD = 'v8'
+const BUILD = import.meta.env.VITE_BUILD_STAMP || 'local'
 
 // ===== icon system: shape (container) + color (hex) + icon_key (inner glyph), all from data =====
 const GLYPH = {
