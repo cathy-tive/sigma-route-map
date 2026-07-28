@@ -5,6 +5,7 @@ import { client, useConfig, usePaginatedElementData } from '@sigmacomputing/plug
 import { DEMO_EVENTS } from './demoData.js'
 
 const PAGE_SIZE = 25000
+const BUILD = 'v4'
 
 // ===== icon system: shape (container) + color (hex) + icon_key (inner glyph), all from data =====
 const GLYPH = {
@@ -46,7 +47,7 @@ function markerHtml(e, size) {
       `<div style="position:absolute;top:${Math.round(h * 0.14)}px;left:0;width:${w}px;text-align:center;font-weight:800;font-size:${Math.round(size * 0.44)}px;color:${missed ? '#1a2233' : '#fff'}">${num}</div>${anchor}</div>`
   }
   if (shape === 'octagon') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M10 2H24L32 10V24L24 32H10L2 24V10Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div>`
-  if (shape === 'triangle') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M17 3.5 32.5 31H1.5Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:${Math.round(size * 0.2)}px">${gsvg(iconKey, Math.round(size * 0.42))}</span></div>`
+  if (shape === 'triangle') return `<div style="position:relative;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 4px rgba(20,30,60,.35))"><svg viewBox="0 0 34 34" width="${size}" height="${size}"><path d="M17 3.5 32.5 31H1.5Z" fill="${color}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:${Math.round(size * 0.26)}px">${gsvg(iconKey, Math.round(size * 0.48))}</span></div>`
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(20,30,60,.35);display:flex;align-items:center;justify-content:center;background:${color}">${gsvg(iconKey, Math.round(size * 0.56))}</div>`
 }
 function markerIcon(e, size) {
@@ -162,6 +163,7 @@ export default function App(){
     const c=mapRef.current; if(c._leaflet_id!=null) c._leaflet_id=undefined
     const map=L.map(c,{worldCopyJump:true,maxZoom:20,attributionControl:false}).setView([20,0],2)
     map.createPane('geom').style.zIndex=350
+    const stamp=L.control({position:'bottomleft'}); stamp.onAdd=()=>{const d=L.DomUtil.create('div'); d.style.cssText='font-size:9px;color:#8894a8;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px'; d.textContent='build '+BUILD; return d}; stamp.addTo(map)
     geomLayer.current=L.layerGroup().addTo(map); markerLayer.current=L.layerGroup().addTo(map); mapInstance.current=map
     return ()=>{ map.remove(); mapInstance.current=null }
   },[])
