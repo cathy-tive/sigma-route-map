@@ -172,16 +172,28 @@ export default function App(){
   useEffect(()=>{ // geometry: transit lines + waypoint polygons
     const map=mapInstance.current,layer=geomLayer.current; if(!map||!layer)return
     layer.clearLayers(); const bounds=[]
-    for(const e of rows){ const g=e.geojson&&(e.geojson.geometry||e.geojson); if(!g)continue
-      if(e.type==='travel'&&g.type==='LineString'){ const ll=g.coordinates.map(c=>[c[1],c[0]])
-        const pl=L.polyline(ll,{color:ROUTE,weight:3.5,opacity:.95,pane:'geom'}).addTo(layer)
-        pl.bindTooltip(`<b>${esc(labelOf(e))}</b> · ${esc(e.legMode||'')}<br>${esc((e.status||'').slice(0,90))}`,{sticky:true})
-        if(cfg.showArrows!==false) L.polylineDecorator(pl,{patterns:[{offset:'6%',repeat:'11%',symbol:L.Symbol.arrowHead({pixelSize:15,headAngle:50,pathOptions:{stroke:true,weight:1,color:'#fff',fillColor:ROUTE,fillOpacity:1}})}]}).addTo(layer)
-        ll.forEach(p=>bounds.push(p))
-      } else if((e.type==='waypoint'||e.type==='failed_waypoint')&&(g.type==='Polygon'||g.type==='MultiPolygon')){
+    // waypoint coords by number, to connect legs with no GPS track
+    const wpByNum={}; rows.forEach(e=>{ if(e.wpNum!=null&&e.la!=null) wpByNum[e.wpNum]=[e.la,e.lo] })
+    const SPARSE=5 // fewer GPS points than this on a leg => low fidelity => dashed
+    // waypoint boundary polygons (under everything)
+    for(const e of rows){ const g=e.geojson&&(e.geojson.geometry||e.geojson)
+      if(g&&(e.type==='waypoint'||e.type==='failed_waypoint')&&(g.type==='Polygon'||g.type==='MultiPolygon'))
         L.geoJSON(g,{pane:'geom',style:{color:e.color||'#2563eb',weight:1.5,fillOpacity:0.12}}).addTo(layer)
-      }
     }
+    // transit legs: solid when the breadcrumb is dense, dashed ("approximate") when sparse or missing
+    rows.filter(e=>e.type==='travel').forEach(e=>{
+      const g=e.geojson&&(e.geojson.geometry||e.geojson)
+      let ll=null,n=0,approx=false
+      if(g&&g.type==='LineString'){ ll=g.coordinates.map(c=>[c[1],c[0]]); n=ll.length }
+      else { const a=wpByNum[e.legNumber], b=wpByNum[e.legNumber+1]; if(a&&b){ ll=[a,b]; approx=true } }
+      if(!ll||ll.length<2) return
+      const dashed=approx||n<SPARSE
+      const pl=L.polyline(ll,{color:ROUTE,weight:dashed?2.5:3.5,opacity:dashed?.8:.95,dashArray:dashed?'6,7':null,pane:'geom'}).addTo(layer)
+      const note=approx?'approximate — no GPS track':(n<SPARSE?`approximate — ${n} GPS point${n===1?'':'s'}`:'')
+      pl.bindTooltip(`<b>${esc(labelOf(e))}</b> · ${esc(e.legMode||'')}${note?'<br><i>'+esc(note)+'</i>':''}`,{sticky:true})
+      if(cfg.showArrows!==false) L.polylineDecorator(pl,{patterns:[{offset:'6%',repeat:'14%',symbol:L.Symbol.arrowHead({pixelSize:14,headAngle:50,pathOptions:{stroke:true,weight:1,color:'#fff',fillColor:ROUTE,fillOpacity:1}})}]}).addTo(layer)
+      ll.forEach(p=>bounds.push(p))
+    })
     rows.forEach(e=>{ if(e.la!=null&&e.lo!=null)bounds.push([e.la,e.lo]) })
     if(!fitted.current&&bounds.length){ map.fitBounds(bounds,{padding:[55,55],maxZoom:12}); fitted.current=true }
   },[rows,cfg.showArrows])
