@@ -82,6 +82,8 @@ const BASE_CONFIG = [
   { name:'hereApiKey', type:'text', secure:true, placeholder:'HERE API key (for HERE basemaps)' },
   { name:'Options', type:'group' },
   { name:'showArrows', type:'toggle', defaultValue:true },
+  { name:'Legend', type:'group' },
+  { name:'legendTitle', type:'text', placeholder:'Legend header (default: Layers)' },
 ]
 client.config.configureEditorPanel(BASE_CONFIG)
 
@@ -220,7 +222,7 @@ export default function App(){
     const items=GROUPS.filter(g=>g.types.some(t=>present.has(t))).map(g=>{const f=rows.find(r=>g.types.includes(r.type));return {...g, rep: f?{...f,wpNum:null,container:false}:{type:g.types[0]}}})
     const legend=L.control({position:'bottomright'})
     legend.onAdd=()=>{ const div=L.DomUtil.create('div','map-legend')
-      div.innerHTML='<div class="map-legend-header">Layers — click to isolate, click more to add</div>'+items.map((c,i)=>`<div class="legend-row" data-i="${i}"><span class="legend-sw">${markerHtml(c.rep,22)}</span>${esc(c.label)}</div>`).join('')
+      div.innerHTML='<div class="map-legend-header">'+esc(config.legendTitle||'Layers — click to isolate, add more')+'</div>'+items.map((c,i)=>`<div class="legend-row" data-i="${i}"><span class="legend-sw">${markerHtml(c.rep,22)}</span>${esc(c.label)}</div>`).join('')
       const paint=()=>{ const sh=shownRef.current; div.querySelectorAll('.legend-row').forEach((r2,j)=>{ const on = sh===null || items[j].types.some(t=>sh.has(t)); r2.classList.toggle('off', !on) }) }
       div.querySelectorAll('.legend-row').forEach(row=>{ row.onclick=()=>{
         const g=items[+row.dataset.i]; let sh=shownRef.current
@@ -230,7 +232,7 @@ export default function App(){
       } })
       L.DomEvent.disableClickPropagation(div); return div }
     legend.addTo(map); legendRef.current=legend
-  },[rows])
+  },[rows, config.legendTitle])
 
   return (<>
     <div id="map" ref={mapRef} />
