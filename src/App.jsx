@@ -5,7 +5,7 @@ import { client, useConfig, usePaginatedElementData } from '@sigmacomputing/plug
 import { DEMO_EVENTS } from './demoData.js'
 
 const PAGE_SIZE = 25000
-const BUILD = 'v4'
+const BUILD = 'v5'
 
 // ===== icon system: shape (container) + color (hex) + icon_key (inner glyph), all from data =====
 const GLYPH = {

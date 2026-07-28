@@ -153,5 +153,7 @@ body,
 }
 .legend-row:hover { background: #f1f4fa; }
 .legend-row.off { opacity: 0.38; }
-.legend-row.off .legend-sw{width:26px;height:26px;flex:0 0 26px;display:flex;align-items:center;justify-content:center}
+.legend-row.off .legend-sw{opacity:.45}
 .legend-sw{width:26px;height:26px;flex:0 0 26px;display:flex;align-items:center;justify-content:center}
+
+/* markerHtml() sizes svgs inline — do not set svg width/height in CSS here. */
