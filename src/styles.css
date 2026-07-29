@@ -90,70 +90,37 @@ body,
   border: 1.5px solid #fff;
 }
 
+/* Legend — compact, clickable layer toggles; collapses to just its header.
+   One rule set only (a duplicate block used to fight this one). */
 .map-legend {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  font-size: 12px;
-  line-height: 1.6;
-  max-height: 45vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.map-legend-header {
-  padding: 8px 10px 4px;
-  font-weight: 700;
-  flex: 0 0 auto;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-.map-legend-rows {
-  padding: 6px 10px 8px;
-  overflow-y: auto;
-  flex: 1 1 auto;
-}
-.map-legend .legend-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.map-legend .legend-glyph {
-  width: 16px;
-  text-align: center;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-/* Legend (clickable layer toggles) */
-.map-legend {
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255,255,255,.94);
   border: 1px solid #e4e8f0;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 11.5px;
-  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.12);
+  border-radius: 8px;
+  padding: 3px 5px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  box-shadow: 0 1px 6px rgba(20,30,60,.14);
   user-select: none;
-  line-height: 1.5;
+  max-width: 168px;
+  max-height: 46vh;
+  overflow-y: auto;
 }
 .map-legend-header {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #697089;
-  margin: 0 2px 5px;
+  display: flex; align-items: center; gap: 4px;
+  font-size: 9px; text-transform: uppercase; letter-spacing: .04em;
+  color: #8894a8; cursor: pointer; padding: 1px 2px; white-space: nowrap;
 }
+.map-legend-header .caret { font-size: 8px; color: #b3bccb; }
+.map-legend.collapsed .legend-row { display: none; }
+.map-legend.collapsed { padding: 3px 6px; }
 .legend-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #586176;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 6px;
+  display: flex; align-items: center; gap: 5px;
+  color: #586176; cursor: pointer; padding: 0 2px; border-radius: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .legend-row:hover { background: #f1f4fa; }
-.legend-row.off { opacity: 0.38; }
-.legend-row.off .legend-sw{opacity:.45}
-.legend-sw{width:26px;height:26px;flex:0 0 26px;display:flex;align-items:center;justify-content:center}
+.legend-row.off { opacity: .38; }
+.legend-row.off .legend-sw { opacity: .45; }
+.legend-sw { width: 18px; height: 18px; flex: 0 0 18px; display: flex; align-items: center; justify-content: center; }
 
 /* markerHtml() sizes svgs inline — do not set svg width/height in CSS here. */

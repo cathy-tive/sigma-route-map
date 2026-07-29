@@ -257,7 +257,11 @@ export default function App(){
     const items=GROUPS.filter(g=>g.types.some(t=>present.has(t))).map(g=>{const f=rows.find(r=>g.types.includes(r.type));return {...g, rep: f?{...f,wpNum:null,container:false}:{type:g.types[0]}}})
     const legend=L.control({position:'bottomright'})
     legend.onAdd=()=>{ const div=L.DomUtil.create('div','map-legend')
-      div.innerHTML='<div class="map-legend-header">'+esc(config.legendTitle||'Layers — click to isolate, add more')+'</div>'+items.map((c,i)=>`<div class="legend-row" data-i="${i}"><span class="legend-sw">${markerHtml(c.rep,22)}</span>${esc(c.label)}</div>`).join('')
+      div.title='Click a layer to show only it; click more to add them back'
+      div.innerHTML='<div class="map-legend-header"><span class="caret">▾</span>'+esc(config.legendTitle||'Layers')+'</div>'
+        +items.map((c,i)=>`<div class="legend-row" data-i="${i}" title="${esc(c.label)}"><span class="legend-sw">${markerHtml(c.rep,16)}</span>${esc(c.label)}</div>`).join('')
+      const hdr=div.querySelector('.map-legend-header')
+      hdr.onclick=()=>{ const c=div.classList.toggle('collapsed'); hdr.querySelector('.caret').textContent=c?'▸':'▾' }
       const paint=()=>{ const sh=shownRef.current; div.querySelectorAll('.legend-row').forEach((r2,j)=>{ const on = sh===null || items[j].types.some(t=>sh.has(t)); r2.classList.toggle('off', !on) }) }
       div.querySelectorAll('.legend-row').forEach(row=>{ row.onclick=()=>{
         const g=items[+row.dataset.i]; let sh=shownRef.current
