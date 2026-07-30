@@ -61,36 +61,35 @@ const HERE_STYLES = { 'HERE Day':'explore.day','HERE Night':'explore.night','HER
 const BASEMAP_OPTIONS = ['Carto Light','OpenStreetMap',...Object.keys(HERE_STYLES)]
 const BASE_CONFIG = [
   { name:'events', type:'element' },
-  { name:'eventType', type:'column', source:'events', allowMultiple:false, label:'Event type (required)' },
+  // core
+  { name:'eventType', type:'column', source:'events', allowMultiple:false, label:'Event type' },
+  { name:'order', type:'column', source:'events', allowMultiple:false, label:'Event time' },
   { name:'latitude', type:'column', source:'events', allowMultiple:false, label:'Latitude' },
   { name:'longitude', type:'column', source:'events', allowMultiple:false, label:'Longitude' },
-  { name:'geometry', type:'column', source:'events', allowMultiple:false, label:'Geometry (geojson) — route line + polygons' },
-  { name:'status', type:'column', source:'events', allowMultiple:false, label:'Status text' },
-  { name:'label', type:'column', source:'events', allowMultiple:false, label:'Display label' },
-  { name:'order', type:'column', source:'events', allowMultiple:false, label:'Event time (ordering)' },
+  { name:'geometry', type:'column', source:'events', allowMultiple:false, label:'Geometry' },
+  // text shown on the marker
+  { name:'label', type:'column', source:'events', allowMultiple:false, label:'Event label' },
+  { name:'status', type:'column', source:'events', allowMultiple:false, label:'Status' },
+  // display attributes
+  { name:'waypointNumber', type:'column', source:'events', allowMultiple:false, label:'Waypoint number' },
+  { name:'legMode', type:'column', source:'events', allowMultiple:false, label:'Leg mode' },
+  { name:'legNumber', type:'column', source:'events', allowMultiple:false, label:'Leg number' },
+  { name:'isContainerPort', type:'column', source:'events', allowMultiple:false, label:'Container port' },
+  { name:'iconKey', type:'column', source:'events', allowMultiple:false, label:'Icon key' },
+  { name:'shape', type:'column', source:'events', allowMultiple:false, label:'Shape' },
+  { name:'color', type:'column', source:'events', allowMultiple:false, label:'Color' },
   { name:'shipmentId', type:'column', source:'events', allowMultiple:false, label:'Shipment id' },
-  { name:'waypointNumber', type:'column', source:'events', allowMultiple:false, label:'Waypoint number — numbers the pins' },
-  { name:'legMode', type:'column', source:'events', allowMultiple:false, label:'Leg mode — transit symbol' },
-  { name:'legNumber', type:'column', source:'events', allowMultiple:false, label:'Leg number — "Leg N"' },
-  { name:'isContainerPort', type:'column', source:'events', allowMultiple:false, label:'Is container port — anchor badge' },
-  { name:'iconKey', type:'column', source:'events', allowMultiple:false, label:'Icon key — typed alert glyphs' },
-  { name:'shape', type:'column', source:'events', allowMultiple:false, label:'Shape (optional)' },
-  { name:'color', type:'column', source:'events', allowMultiple:false, label:'Color (optional, hex)' },
-  { name:'Tooltip', type:'group' },
-  // One multi-pick field (per Sigma's documented shape) plus single slots, because the
-  // multi-column control doesn't accept input in some Sigma builds. Any of these that
-  // are set get merged, in order, into the marker tooltip.
-  { name:'tooltip', type:'column', source:'events', allowMultiple:true, label:'Tooltip fields (multi-pick)' },
-  { name:'tooltip1', type:'column', source:'events', allowMultiple:false, label:'Tooltip field 1' },
-  { name:'tooltip2', type:'column', source:'events', allowMultiple:false, label:'Tooltip field 2' },
-  { name:'tooltip3', type:'column', source:'events', allowMultiple:false, label:'Tooltip field 3' },
-  { name:'tooltip4', type:'column', source:'events', allowMultiple:false, label:'Tooltip field 4' },
+  // tooltip: single slots (the multi-pick control doesn't accept input in some Sigma builds)
+  { name:'tooltip1', type:'column', source:'events', allowMultiple:false, label:'Tooltip 1' },
+  { name:'tooltip2', type:'column', source:'events', allowMultiple:false, label:'Tooltip 2' },
+  { name:'tooltip3', type:'column', source:'events', allowMultiple:false, label:'Tooltip 3' },
+  { name:'tooltip4', type:'column', source:'events', allowMultiple:false, label:'Tooltip 4' },
+  // groups below hold NON-column settings, which do nest correctly
   { name:'Base map', type:'group' },
   { name:'basemap', type:'dropdown', values:BASEMAP_OPTIONS, defaultValue:'Carto Light' },
   { name:'hereApiKey', type:'text', secure:true, placeholder:'HERE API key (for HERE basemaps)' },
   { name:'Options', type:'group' },
   { name:'showArrows', type:'toggle', defaultValue:true },
-  { name:'Legend', type:'group' },
   { name:'legendTitle', type:'text', placeholder:'Legend header (default: Layers)' },
 ]
 client.config.configureEditorPanel(BASE_CONFIG)
@@ -164,7 +163,7 @@ export default function App(){
       status=col(config.status),label=col(config.label),mode=col(config.legMode),legn=col(config.legNumber),
       wp=col(config.waypointNumber),cont=col(config.isContainerPort),color=col(config.color),shape=col(config.shape),ik=col(config.iconKey)
     // user-chosen tooltip columns (ids may arrive as strings or objects); keep their display names
-    const rawTip=[].concat(config.tooltip||[], config.tooltip1||[], config.tooltip2||[], config.tooltip3||[], config.tooltip4||[])
+    const rawTip=[].concat(config.tooltip1||[], config.tooltip2||[], config.tooltip3||[], config.tooltip4||[])
     const tipCols=rawTip
       .map(raw=>{ const id=typeof raw==='string'?raw:(raw?.id??raw?.columnId??raw?.name); return { id, name:cols?.[id]?.name||'', values:data?.[id] } })
       .filter(c=>c.id&&c.values)
