@@ -158,7 +158,7 @@ export default function App(){
   const cols=useElementColumns(config.events)
   const isDemo=typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('demo')
   const mapRef=useRef(null), mapInstance=useRef(null), baseRef=useRef(null)
-  const geomLayer=useRef(null), markerLayer=useRef(null), legendRef=useRef(null), fitted=useRef(false)
+  const geomLayer=useRef(null), markerLayer=useRef(null), legendRef=useRef(null), fitted=useRef(false), extent=useRef(null)
   const shownRef=useRef(null)
 
   const { rows, error, shiftLng } = useMemo(()=>{
@@ -203,6 +203,20 @@ export default function App(){
     const c=mapRef.current; if(c._leaflet_id!=null) c._leaflet_id=undefined
     const map=L.map(c,{worldCopyJump:false,maxZoom:20,attributionControl:false}).setView([20,0],2)
     map.createPane('geom').style.zIndex=350
+    // Recenter: refit to the whole shipment (the extent captured when geometry was drawn)
+    const recenter=L.control({position:'topleft'})
+    recenter.onAdd=()=>{
+      const bar=L.DomUtil.create('div','leaflet-bar recenter-ctl')
+      const a=L.DomUtil.create('a','',bar)
+      a.href='#'; a.title='Recenter on the shipment'; a.setAttribute('role','button'); a.setAttribute('aria-label','Recenter on the shipment')
+      a.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" style="display:block;margin:6px auto;stroke:#586176;fill:none;stroke-width:2;stroke-linecap:round"><circle cx="12" cy="12" r="7"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg>'
+      L.DomEvent.disableClickPropagation(bar); L.DomEvent.disableScrollPropagation(bar)
+      L.DomEvent.on(a,'click',(ev)=>{ L.DomEvent.preventDefault(ev)
+        const b=extent.current; if(b&&b.length) map.fitBounds(b,{padding:[55,55],maxZoom:12}) })
+      return bar
+    }
+    recenter.addTo(map)
+    if(import.meta.env.VITE_HARNESS) window.__map=map   // harness-only handle for tests
     const stamp=L.control({position:'bottomleft'}); stamp.onAdd=()=>{const d=L.DomUtil.create('div'); d.style.cssText='font-size:9px;color:#8894a8;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px'; d.textContent='build '+BUILD; return d}; stamp.addTo(map)
     geomLayer.current=L.layerGroup().addTo(map); markerLayer.current=L.layerGroup().addTo(map); mapInstance.current=map
     return ()=>{ map.remove(); mapInstance.current=null }
@@ -241,6 +255,7 @@ export default function App(){
       ll.forEach(p=>bounds.push(p))
     })
     rows.forEach(e=>{ if(e.la!=null&&e.lo!=null)bounds.push([e.la,e.lo]) })
+    if(bounds.length) extent.current=bounds
     if(!fitted.current&&bounds.length){ map.fitBounds(bounds,{padding:[55,55],maxZoom:12}); fitted.current=true }
   },[rows,shiftLng,cfg.showArrows])
   useEffect(()=>{ fitted.current=false },[config.events])

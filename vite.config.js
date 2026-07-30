@@ -6,6 +6,7 @@ import { defineConfig } from 'vite'
 const sha = (() => { try { return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return 'local' } })()
 const now = new Date().toISOString().replace('T', ' ').slice(0, 16)
 process.env.VITE_BUILD_STAMP = `${now}Z · ${sha}`
+if (process.env.HARNESS) process.env.VITE_HARNESS = '1'
 import react from '@vitejs/plugin-react'
 
 // Sigma embeds the plugin in an iframe; base:'./' keeps asset URLs relative so
