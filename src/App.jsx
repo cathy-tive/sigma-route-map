@@ -201,7 +201,7 @@ export default function App(){
   useEffect(()=>{ // init once
     if(mapInstance.current||!mapRef.current) return
     const c=mapRef.current; if(c._leaflet_id!=null) c._leaflet_id=undefined
-    const map=L.map(c,{worldCopyJump:false,maxZoom:20,attributionControl:false}).setView([20,0],2)
+    const map=L.map(c,{worldCopyJump:false,maxZoom:20,zoomSnap:0,zoomDelta:0.5,attributionControl:false}).setView([20,0],2)
     map.createPane('geom').style.zIndex=350
     // Recenter: refit to the whole shipment (the extent captured when geometry was drawn)
     const recenter=L.control({position:'topleft'})
@@ -214,7 +214,7 @@ export default function App(){
       a.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" style="display:block;stroke:#404a5c;fill:none;stroke-width:2;stroke-linecap:round"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="#404a5c" stroke="none"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12h3.5M19 12h3.5"/></svg>'
       L.DomEvent.disableClickPropagation(bar); L.DomEvent.disableScrollPropagation(bar)
       L.DomEvent.on(a,'click',(ev)=>{ L.DomEvent.preventDefault(ev)
-        const b=extent.current; if(b&&b.length) map.fitBounds(b,{padding:[20,20],maxZoom:14}) })
+        const b=extent.current; if(b&&b.length) map.fitBounds(b,{paddingTopLeft:[16,50],paddingBottomRight:[16,12],maxZoom:16}) })
       return bar
     }
     recenter.addTo(map)
@@ -258,7 +258,7 @@ export default function App(){
     })
     rows.forEach(e=>{ if(e.la!=null&&e.lo!=null)bounds.push([e.la,e.lo]) })
     if(bounds.length) extent.current=bounds
-    if(!fitted.current&&bounds.length){ map.fitBounds(bounds,{padding:[20,20],maxZoom:14}); fitted.current=true }
+    if(!fitted.current&&bounds.length){ map.fitBounds(bounds,{paddingTopLeft:[16,50],paddingBottomRight:[16,12],maxZoom:16}); fitted.current=true }
   },[rows,shiftLng,cfg.showArrows])
   useEffect(()=>{ fitted.current=false },[config.events])
 
