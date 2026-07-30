@@ -30,6 +30,18 @@ const ANCHOR_BADGE = '<div style="position:absolute;right:-9px;top:-8px;width:22
 const DEF_SHAPE={waypoint:'pin',failed_waypoint:'pin',travel:'bare','unplanned stop':'octagon',temp_out_of_range:'triangle',temp_back_in_range:'triangle',alert:'triangle',carrier_change:'circle',loading:'circle',unloading:'circle',arrive:'circle',depart:'circle'}
 const DEF_COLOR={waypoint:'#2563eb',failed_waypoint:'#94a3b8',travel:null,'unplanned stop':'#d97706',temp_out_of_range:'#dc2626',temp_back_in_range:'#0d9488',alert:'#dc2626',carrier_change:'#7c3aed',loading:'#16a34a',unloading:'#16a34a',arrive:'#586176',depart:'#586176'}
 const DEF_ICON={waypoint:'pin',failed_waypoint:'pin-missed',travel:'transit','unplanned stop':'stop',temp_out_of_range:'thermo-up',temp_back_in_range:'thermo-dn',alert:'bell',carrier_change:'handoff',loading:'load',unloading:'unload',arrive:'anchor',depart:'anchor'}
+
+// A route crossing the Pacific has longitudes that jump +174 -> -75, which Leaflet draws
+// the LONG way around the world. Pick whichever longitude frame gives the tighter span:
+// the standard [-180,180], or 0..360 (negatives shifted east). Applied to every coordinate
+// (markers, lines, bounds) so the whole shipment lives in one continuous frame.
+function makeShiftLng(lngs){
+  const xs=lngs.filter(v=>typeof v==='number'&&Number.isFinite(v))
+  if(xs.length<2) return (v)=>v
+  const span=(a)=>{ let lo=Infinity,hi=-Infinity; for(const v of a){ if(v<lo)lo=v; if(v>hi)hi=v } return hi-lo }
+  const shifted=xs.map(v=>v<0?v+360:v)
+  return span(shifted)<span(xs) ? ((v)=>v==null?v:(v<0?v+360:v)) : ((v)=>v)
+}
 function markerHtml(e, size) {
   size = size || 32
   const type = e.type
@@ -149,16 +161,16 @@ export default function App(){
   const geomLayer=useRef(null), markerLayer=useRef(null), legendRef=useRef(null), fitted=useRef(false)
   const shownRef=useRef(null)
 
-  const { rows, error } = useMemo(()=>{
+  const { rows, error, shiftLng } = useMemo(()=>{
     if(isDemo&&!config.events){
       return { rows: DEMO_EVENTS.map(r=>({ shipId:'demo', type:r.EVENT_TYPE, order:r.EVENT_TIME, la:toNum(r.LATITUDE), lo:toNum(r.LONGITUDE),
         geojson:r.GEOJSON, status:r.STATUS, label:r.DISPLAY_LABEL, legMode:r.LEG_MODE, legNumber:r.LEG_NUMBER,
-        wpNum:r.WAYPOINT_NUMBER, container:!!r.IS_CONTAINER_PORT, color:r.COLOR, shape:r.SHAPE, iconKey:r.ICON_KEY, tip:[] })), error:null }
+        wpNum:r.WAYPOINT_NUMBER, container:!!r.IS_CONTAINER_PORT, color:r.COLOR, shape:r.SHAPE, iconKey:r.ICON_KEY, tip:[] })), error:null, shiftLng:(v)=>v }
     }
-    if(!config.events) return { rows:[], error:'Select an events table in the panel.' }
-    if(!config.eventType) return { rows:[], error:'Choose the event type column.' }
+    if(!config.events) return { rows:[], error:'Select an events table in the panel.', shiftLng:(v)=>v }
+    if(!config.eventType) return { rows:[], error:'Choose the event type column.', shiftLng:(v)=>v }
     const col=(id)=>id?data?.[id]:null
-    const et=col(config.eventType); if(!et) return { rows:[], error:'Loading data…' }
+    const et=col(config.eventType); if(!et) return { rows:[], error:'Loading data…', shiftLng:(v)=>v }
     const lat=col(config.latitude),lon=col(config.longitude),geo=col(config.geometry),ship=col(config.shipmentId),ord=col(config.order),
       status=col(config.status),label=col(config.label),mode=col(config.legMode),legn=col(config.legNumber),
       wp=col(config.waypointNumber),cont=col(config.isContainerPort),color=col(config.color),shape=col(config.shape),ik=col(config.iconKey)
@@ -175,14 +187,21 @@ export default function App(){
         container:cont?truthy(cont[i]):false, color:color?color[i]:null, shape:shape?String(shape[i]||''):null, iconKey:ik?String(ik[i]||''):null,
         tip:tipCols.map(c=>({name:c.name,value:c.values[i]})) })
     }
-    return { rows:out, error:out.length?null:'No rows.' }
+    // collect every longitude (points + route geometry) to choose one frame
+    const allLngs=[]
+    for(const r of out){ if(r.lo!=null) allLngs.push(r.lo)
+      const g=r.geojson&&(r.geojson.geometry||r.geojson)
+      if(g&&g.type==='LineString') for(const c of g.coordinates) allLngs.push(c[0]) }
+    const shift=makeShiftLng(allLngs)
+    for(const r of out) if(r.lo!=null) r.lo=shift(r.lo)
+    return { rows:out, error:out.length?null:'No rows.', shiftLng:shift }
   },[config,data,cols,isDemo])
 
   const cfg=config
   useEffect(()=>{ // init once
     if(mapInstance.current||!mapRef.current) return
     const c=mapRef.current; if(c._leaflet_id!=null) c._leaflet_id=undefined
-    const map=L.map(c,{worldCopyJump:true,maxZoom:20,attributionControl:false}).setView([20,0],2)
+    const map=L.map(c,{worldCopyJump:false,maxZoom:20,attributionControl:false}).setView([20,0],2)
     map.createPane('geom').style.zIndex=350
     const stamp=L.control({position:'bottomleft'}); stamp.onAdd=()=>{const d=L.DomUtil.create('div'); d.style.cssText='font-size:9px;color:#8894a8;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px'; d.textContent='build '+BUILD; return d}; stamp.addTo(map)
     geomLayer.current=L.layerGroup().addTo(map); markerLayer.current=L.layerGroup().addTo(map); mapInstance.current=map
@@ -200,14 +219,18 @@ export default function App(){
     const SPARSE=5 // fewer GPS points than this on a leg => low fidelity => dashed
     // waypoint boundary polygons (under everything)
     for(const e of rows){ const g=e.geojson&&(e.geojson.geometry||e.geojson)
-      if(g&&(e.type==='waypoint'||e.type==='failed_waypoint')&&(g.type==='Polygon'||g.type==='MultiPolygon'))
-        L.geoJSON(g,{pane:'geom',style:{color:e.color||'#2563eb',weight:1.5,fillOpacity:0.12}}).addTo(layer)
+      if(g&&(e.type==='waypoint'||e.type==='failed_waypoint')&&(g.type==='Polygon'||g.type==='MultiPolygon')){
+        const shifted=JSON.parse(JSON.stringify(g))
+        const walk=(a)=>{ if(typeof a[0]==='number'){ a[0]=shiftLng(a[0]); return } a.forEach(walk) }
+        walk(shifted.coordinates)
+        L.geoJSON(shifted,{pane:'geom',style:{color:e.color||'#2563eb',weight:1.5,fillOpacity:0.12}}).addTo(layer)
+      }
     }
     // transit legs: solid when the breadcrumb is dense, dashed ("approximate") when sparse or missing
     rows.filter(e=>e.type==='travel').forEach(e=>{
       const g=e.geojson&&(e.geojson.geometry||e.geojson)
       let ll=null,n=0,approx=false
-      if(g&&g.type==='LineString'){ ll=g.coordinates.map(c=>[c[1],c[0]]); n=ll.length }
+      if(g&&g.type==='LineString'){ ll=g.coordinates.map(c=>[c[1],shiftLng(c[0])]); n=ll.length }
       else { const a=wpByNum[e.legNumber], b=wpByNum[e.legNumber+1]; if(a&&b){ ll=[a,b]; approx=true } }
       if(!ll||ll.length<2) return
       const dashed=approx||n<SPARSE
@@ -219,7 +242,7 @@ export default function App(){
     })
     rows.forEach(e=>{ if(e.la!=null&&e.lo!=null)bounds.push([e.la,e.lo]) })
     if(!fitted.current&&bounds.length){ map.fitBounds(bounds,{padding:[55,55],maxZoom:12}); fitted.current=true }
-  },[rows,cfg.showArrows])
+  },[rows,shiftLng,cfg.showArrows])
   useEffect(()=>{ fitted.current=false },[config.events])
 
   useEffect(()=>{ // markers: hub-and-spoke, collapse/expand

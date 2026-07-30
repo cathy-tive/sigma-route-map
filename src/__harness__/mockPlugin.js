@@ -10,14 +10,14 @@ const COLS = {
 // 4 rows: origin waypoint, ocean leg w/ LineString, a shock alert, missed destination
 const D = {
   c_type:['waypoint','travel','alert','alert','failed_waypoint'],
-  c_lat:[52.95,null,47.5,47.502,37.74],
-  c_lon:[-1.15,null,-12.0,-12.002,-25.67],
+  c_lat:[-36.85,null,20.0,25.0,40.71],
+  c_lon:[174.76,null,-160.0,-120.0,-74.01],
   c_geo:[
-    JSON.stringify({type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-1.15,52.95]}}),
-    JSON.stringify({type:'LineString',coordinates:[[-3,53.41],[-8.5,50],[-16,45],[-23,39.8]]}),
-    JSON.stringify({type:'Point',coordinates:[-12,47.5]}),
-    JSON.stringify({type:'Point',coordinates:[-12.002,47.502]}),
-    JSON.stringify({type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-25.67,37.74]}}),
+    JSON.stringify({type:'Feature',properties:{},geometry:{type:'Point',coordinates:[174.76,-36.85]}}),
+    JSON.stringify({type:'LineString',coordinates:[[174.76,-36.85],[-179.0,-20.0],[-160.0,0.0],[-140.0,15.0],[-120.0,25.0],[-100.0,30.0],[-74.01,40.71]]}),
+    JSON.stringify({type:'Point',coordinates:[-160.0,20.0]}),
+    JSON.stringify({type:'Point',coordinates:[-120.0,25.0]}),
+    JSON.stringify({type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-74.01,40.71]}}),
   ],
   c_status:['Shipment origin: Northgate Cold Store','In transit, leg 2: A -> B','Shock alert ×4 over 12 min','Shipment destination (not reached): Port Vesta','Light alert (240 LUX)'],
   c_label:['Waypoint','In transit','Alert','Failed waypoint','Alert'],
