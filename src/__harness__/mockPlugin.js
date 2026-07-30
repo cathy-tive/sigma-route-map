@@ -37,7 +37,7 @@ const CONFIG = {
   status:'c_status', label:'c_label', order:'c_time', shipmentId:'c_ship', waypointNumber:'c_wp',
   legMode:'c_mode', legNumber:'c_leg', isContainerPort:'c_port', iconKey:'c_icon', shape:'c_shape',
   color:'c_color', durationSec:'c_dur',
-  tooltip:['c_status','c_mode'],           // multi-column tooltip, as Sigma sends it
+  tooltip1:'c_status', tooltip2:'c_mode',   // single-slot tooltip fields (the working path)
   basemap:'Carto Light', showArrows:true, legendTitle:'',
 }
 export const client = { config: { configureEditorPanel(){}, get(){return CONFIG} } }
