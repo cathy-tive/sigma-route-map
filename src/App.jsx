@@ -5,6 +5,9 @@ import { client, useConfig, useElementColumns, usePaginatedElementData } from '@
 import { DEMO_EVENTS } from './demoData.js'
 
 const PAGE_SIZE = 25000
+// Asymmetric because a waypoint pin is anchored at its point and draws ~47px UPWARD,
+// so a tight top edge would clip the northernmost pin's head.
+const FIT = { paddingTopLeft:[16,50], paddingBottomRight:[16,12], maxZoom:16 }
 const BUILD = import.meta.env.VITE_BUILD_STAMP || 'local'
 
 // ===== icon system: shape (container) + color (hex) + icon_key (inner glyph), all from data =====
@@ -158,7 +161,7 @@ export default function App(){
   const cols=useElementColumns(config.events)
   const isDemo=typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('demo')
   const mapRef=useRef(null), mapInstance=useRef(null), baseRef=useRef(null)
-  const geomLayer=useRef(null), markerLayer=useRef(null), legendRef=useRef(null), fitted=useRef(false), extent=useRef(null)
+  const geomLayer=useRef(null), markerLayer=useRef(null), legendRef=useRef(null), fitted=useRef(false), extent=useRef(null), fitTimer=useRef(null)
   const shownRef=useRef(null)
 
   const { rows, error, shiftLng } = useMemo(()=>{
@@ -214,14 +217,23 @@ export default function App(){
       a.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" style="display:block;stroke:#404a5c;fill:none;stroke-width:2;stroke-linecap:round"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="#404a5c" stroke="none"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12h3.5M19 12h3.5"/></svg>'
       L.DomEvent.disableClickPropagation(bar); L.DomEvent.disableScrollPropagation(bar)
       L.DomEvent.on(a,'click',(ev)=>{ L.DomEvent.preventDefault(ev)
-        const b=extent.current; if(b&&b.length) map.fitBounds(b,{paddingTopLeft:[16,50],paddingBottomRight:[16,12],maxZoom:16}) })
+        const b=extent.current; if(b&&b.length) map.fitBounds(b,FIT) })
       return bar
     }
     recenter.addTo(map)
     if(import.meta.env.VITE_HARNESS) window.__map=map   // harness-only handle for tests
     console.info('[shipment map] build', BUILD)   // was an on-map label; kept out of the UI
     geomLayer.current=L.layerGroup().addTo(map); markerLayer.current=L.layerGroup().addTo(map); mapInstance.current=map
-    return ()=>{ map.remove(); mapInstance.current=null }
+    // Re-measure and re-fit when the element is resized (or first gets a real size in Sigma).
+    let ro=null
+    if(typeof ResizeObserver!=='undefined'){
+      ro=new ResizeObserver(()=>{ map.invalidateSize()
+        const sized=c.clientWidth>20&&c.clientHeight>20
+        if(sized&&extent.current&&extent.current.length&&!fitted.current){ map.fitBounds(extent.current,FIT); fitted.current=true }
+      })
+      ro.observe(c)
+    }
+    return ()=>{ if(ro)ro.disconnect(); clearTimeout(fitTimer.current); map.remove(); mapInstance.current=null }
   },[])
   useEffect(()=>{ const map=mapInstance.current; if(!map)return; if(baseRef.current)baseRef.current.remove()
     const layer=makeBaseLayer(cfg.basemap,cfg.hereApiKey); layer.addTo(map); if(layer.bringToBack)layer.bringToBack(); baseRef.current=layer; map.setMaxZoom(layer.options.maxNativeZoom??19)
@@ -258,7 +270,19 @@ export default function App(){
     })
     rows.forEach(e=>{ if(e.la!=null&&e.lo!=null)bounds.push([e.la,e.lo]) })
     if(bounds.length) extent.current=bounds
-    if(!fitted.current&&bounds.length){ map.fitBounds(bounds,{paddingTopLeft:[16,50],paddingBottomRight:[16,12],maxZoom:16}); fitted.current=true }
+    // Sigma can mount the plugin iframe before it has dimensions. Fitting against a 0-size
+    // container yields a junk zoom (observed: z16 maxed out), so wait for a real size instead
+    // of fitting immediately -- and don't rely on ResizeObserver alone, which is throttled in
+    // a hidden/backgrounded frame. Poll briefly until the element is real, then fit once.
+    if(bounds.length&&!fitted.current){
+      const tryFit=(attempt)=>{
+        const m=mapInstance.current; if(!m||fitted.current)return
+        const el=m.getContainer()
+        if(el.clientWidth>20&&el.clientHeight>20){ m.invalidateSize(); m.fitBounds(extent.current||bounds,FIT); fitted.current=true; return }
+        if(attempt<40) fitTimer.current=setTimeout(()=>tryFit(attempt+1),150)   // ~6s of patience
+      }
+      clearTimeout(fitTimer.current); tryFit(0)
+    }
   },[rows,shiftLng,cfg.showArrows])
   useEffect(()=>{ fitted.current=false },[config.events])
 
