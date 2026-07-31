@@ -115,6 +115,17 @@ const toNum = (v) => { if (v==null||v==='') return null; const n = typeof v==='n
 const truthy = (v) => v===true||v==='true'||v===1||v==='1'
 function parseGeom(cell){ if(cell==null) return null; let o=cell; if(typeof cell==='string'){ try{o=JSON.parse(cell)}catch{return null} } return o && (o.geometry||o) }
 const esc = (s)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+const fmtTime = (t)=> new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})
+// A user-added tooltip column may be a timestamp, which Sigma passes as epoch millis.
+// Format 13-digit epoch-ms values (unambiguous for this era), and epoch-seconds when the
+// column is clearly time-named; leave everything else untouched.
+function fmtTipVal(name, v){
+  if(v==null||v==='') return v
+  const n = typeof v==='number'?v:(/^\d{10,13}$/.test(String(v).trim())?Number(v):NaN)
+  if(Number.isFinite(n) && n>=1e12 && n<4e12) return fmtTime(n)
+  if(Number.isFinite(n) && n>=1e9 && n<1e11 && /\b(time|date|arrived|departed|timestamp)\b/i.test(name||'')) return fmtTime(n*1000)
+  return v
+}
 function labelOf(e){
   const t=e.type, s=e.status||''
   if(t==='waypoint'||t==='failed_waypoint'){ if(/^Shipment origin/i.test(s))return'Shipment origin'; if(/not reached/i.test(s))return'Destination — not reached'; if(/^Shipment destination/i.test(s))return'Shipment destination'; return e.wpNum?('Waypoint '+e.wpNum):'Waypoint' }
@@ -125,7 +136,7 @@ function pop(e){
   const head=`<b>${esc(labelOf(e))}</b>`
   if(e.tip&&e.tip.length){
     const lines=e.tip.filter(t=>t.value!==null&&t.value!==undefined&&t.value!=='')
-      .map(t=>`<div style="margin-top:2px">${t.name?`<span style="color:#697089">${esc(t.name)}:</span> `:''}${esc(t.value)}</div>`)
+      .map(t=>`<div style="margin-top:2px">${t.name?`<span style="color:#697089">${esc(t.name)}:</span> `:''}${esc(fmtTipVal(t.name,t.value))}</div>`)
     return head+(lines.length?lines.join(''):'')
   }
   const prov = e.arrSrc==='container'||e.depSrc==='container'
