@@ -90,6 +90,8 @@ const BASE_CONFIG = [
   { name:'legMode', type:'column', source:'events', allowMultiple:false, label:'Leg mode' },
   { name:'legNumber', type:'column', source:'events', allowMultiple:false, label:'Leg number' },
   { name:'isContainerPort', type:'column', source:'events', allowMultiple:false, label:'Container port' },
+  { name:'arrivalSource', type:'column', source:'events', allowMultiple:false, label:'Arrival source' },
+  { name:'departureSource', type:'column', source:'events', allowMultiple:false, label:'Departure source' },
   { name:'iconKey', type:'column', source:'events', allowMultiple:false, label:'Icon key' },
   { name:'shape', type:'column', source:'events', allowMultiple:false, label:'Shape' },
   { name:'color', type:'column', source:'events', allowMultiple:false, label:'Color' },
@@ -126,7 +128,9 @@ function pop(e){
       .map(t=>`<div style="margin-top:2px">${t.name?`<span style="color:#697089">${esc(t.name)}:</span> `:''}${esc(t.value)}</div>`)
     return head+(lines.length?lines.join(''):'')
   }
-  return head+`<br>${esc(e.status||'')}`
+  const prov = e.arrSrc==='container'||e.depSrc==='container'
+    ? '<br><span style="color:#586176">&#9875; time from the container gate feed</span>' : ''
+  return head+`<br>${esc(e.status||'')}`+prov
 }
 
 function makeBaseLayer(basemap, apiKey){
@@ -176,7 +180,8 @@ export default function App(){
     const et=col(config.eventType); if(!et) return { rows:[], error:'Loading data…', shiftLng:(v)=>v }
     const lat=col(config.latitude),lon=col(config.longitude),geo=col(config.geometry),ship=col(config.shipmentId),ord=col(config.order),
       status=col(config.status),label=col(config.label),mode=col(config.legMode),legn=col(config.legNumber),
-      wp=col(config.waypointNumber),cont=col(config.isContainerPort),color=col(config.color),shape=col(config.shape),ik=col(config.iconKey)
+      wp=col(config.waypointNumber),cont=col(config.isContainerPort),color=col(config.color),shape=col(config.shape),ik=col(config.iconKey),
+      asrc=col(config.arrivalSource),dsrc=col(config.departureSource)
     // user-chosen tooltip columns (ids may arrive as strings or objects); keep their display names
     const rawTip=[].concat(config.tooltip1||[], config.tooltip2||[], config.tooltip3||[], config.tooltip4||[])
     const tipCols=rawTip
@@ -188,6 +193,7 @@ export default function App(){
         la:lat?toNum(lat[i]):null, lo:lon?toNum(lon[i]):null, geojson:geo?parseGeom(geo[i]):null, status:status?status[i]:'',
         label:label?label[i]:null, legMode:mode?mode[i]:null, legNumber:legn?legn[i]:null, wpNum:wp?toNum(wp[i]):null,
         container:cont?truthy(cont[i]):false, color:color?color[i]:null, shape:shape?String(shape[i]||''):null, iconKey:ik?String(ik[i]||''):null,
+        arrSrc:asrc?asrc[i]:null, depSrc:dsrc?dsrc[i]:null,
         tip:tipCols.map(c=>({name:c.name,value:c.values[i]})) })
     }
     // collect every longitude (points + route geometry) to choose one frame
